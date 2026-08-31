@@ -48,13 +48,27 @@ namespace Heavypin.Runtime
                     Material? old = src != null && m < src.Length ? src[m] : null;
                     string matName = old != null && !string.IsNullOrEmpty(old.name) ? old.name : r.gameObject.name;
                     Material mat = VisualShader.Make(matName + "_hp", cull: 0f);
-                    Texture? albedo = HeavypinMaps.Albedo(matName) ?? PeekAlbedo(old);
+                    Texture? albedo = HeavypinMaps.Albedo(matName);
+                    if (albedo == null)
+                    {
+                        string? fb = MatFallback(matName);
+                        if (!string.IsNullOrEmpty(fb))
+                            albedo = HeavypinMaps.Albedo(fb!);
+                    }
+                    if (albedo == null)
+                        albedo = PeekAlbedo(old);
                     bool albedoOwns = albedo != null;
                     if (albedo != null)
                         WriteAlbedo(mat, albedo);
                     else
                         ClearAlbedoMaps(mat);
                     Texture2D? nml = HeavypinMaps.Normal(matName);
+                    if (nml == null)
+                    {
+                        string? fbN = MatFallback(matName);
+                        if (!string.IsNullOrEmpty(fbN))
+                            nml = HeavypinMaps.Normal(fbN!);
+                    }
                     if (nml != null)
                         ApplyDiskNormal(mat, nml, old);
                     else
@@ -153,6 +167,23 @@ namespace Heavypin.Runtime
                 mat.SetTexture("_EmissionMap", null);
             mat.DisableKeyword("_EMISSION");
             mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+        }
+
+        // Main slot 2: Материал.004 → Материал.003 disk stem. Empty = no extra try.
+        private static string? MatFallback(string matName)
+        {
+            if (string.IsNullOrEmpty(matName))
+                return null;
+            string n = matName;
+            int inst = n.LastIndexOf(" (Instance)", System.StringComparison.OrdinalIgnoreCase);
+            if (inst > 0)
+                n = n.Substring(0, inst);
+            if (n.EndsWith(".004", System.StringComparison.Ordinal) ||
+                n.EndsWith("_004", System.StringComparison.Ordinal))
+                return n.Substring(0, n.Length - 4) + ".003";
+            if (n.EndsWith("004", System.StringComparison.Ordinal))
+                return n.Substring(0, n.Length - 3) + "003";
+            return null;
         }
 
         private static Texture? PeekAlbedo(Material? mat)

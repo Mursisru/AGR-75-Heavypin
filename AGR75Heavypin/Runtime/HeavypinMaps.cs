@@ -35,6 +35,15 @@ namespace Heavypin.Runtime
             string fold = Fold(key);
             if (AlbedoPath.ContainsKey(fold))
                 return fold;
+
+            // Main slot 2: Материал.004 / Материал_004 → Материал.003 maps on disk.
+            string[] aliases = AliasFolds(fold);
+            for (int a = 0; a < aliases.Length; a++)
+            {
+                if (AlbedoPath.ContainsKey(aliases[a]))
+                    return aliases[a];
+            }
+
             foreach (string k in AlbedoPath.Keys)
             {
                 if (fold.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -42,6 +51,26 @@ namespace Heavypin.Runtime
                     return k;
             }
             return fold;
+        }
+
+        private static string[] AliasFolds(string fold)
+        {
+            if (string.IsNullOrEmpty(fold))
+                return Array.Empty<string>();
+            // Cyrillic Материал.004 / Материал_004 / material004 → material003 / материал003
+            if (fold == "материал004" || fold == "material004" || fold.EndsWith("004", StringComparison.Ordinal))
+            {
+                string base3 = fold.Substring(0, fold.Length - 3) + "003";
+                return new[] { base3, "материал003", "material003", "материал", "material" };
+            }
+            if (fold == "материал001" || fold == "material001" || fold.EndsWith("001", StringComparison.Ordinal))
+            {
+                string base0 = fold.Substring(0, fold.Length - 3);
+                return new[] { base0, "материал", "material" };
+            }
+            if (fold == "материал" || fold == "material")
+                return new[] { "материал", "material" };
+            return Array.Empty<string>();
         }
 
         private static Texture2D? Load(string fold, Dictionary<string, string> table, bool linear, string suffix)
@@ -136,9 +165,25 @@ namespace Heavypin.Runtime
             if (string.IsNullOrEmpty(fold))
                 return;
             if (color)
+            {
                 AlbedoPath[fold] = path;
+                Mirror004(AlbedoPath, fold, path);
+            }
             else
+            {
                 NormalPath[fold] = path;
+                Mirror004(NormalPath, fold, path);
+            }
+        }
+
+        // Материал.003 / Material.003 maps also answer Материал.004 lookups.
+        private static void Mirror004(Dictionary<string, string> table, string fold, string path)
+        {
+            if (fold == "материал003" || fold == "material003")
+            {
+                table["материал004"] = path;
+                table["material004"] = path;
+            }
         }
 
         private static string Strip(string? name)

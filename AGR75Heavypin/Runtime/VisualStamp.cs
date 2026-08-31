@@ -81,12 +81,9 @@ namespace Heavypin
                 return;
 
             EnsureSharedUniform(rocketPrefab);
-            Quaternion rot = rocketPrefab != null
-                ? rocketPrefab.transform.localRotation
-                : Quaternion.FromToRotation(Vector3.left, Vector3.forward);
-
+            // Same axis as launcher (Blender-matched). Extra -X→+Z yaw under oriented slots = sideways noses.
             vis.localPosition = Vector3.zero;
-            vis.localRotation = rot;
+            vis.localRotation = Quaternion.identity;
             vis.localScale = Vector3.one * _sharedUniform;
 
             Transform? center = DummyFind.FindRocketCenter(vis);
@@ -101,12 +98,8 @@ namespace Heavypin
             if (launcher == null)
                 return;
 
-            Quaternion rot = launcherPrefab != null
-                ? launcherPrefab.transform.localRotation
-                : Quaternion.FromToRotation(Vector3.left, Vector3.forward);
-
             launcher.localPosition = Vector3.zero;
-            launcher.localRotation = rot;
+            launcher.localRotation = Quaternion.identity;
             launcher.localScale = Vector3.one * _sharedUniform;
 
             Transform? attach = DummyFind.FindPylonAttach(launcher);
@@ -173,7 +166,11 @@ namespace Heavypin
             vis.hideFlags = HideFlags.None;
             vis.SetActive(true);
             vis.transform.localPosition = Vector3.zero;
-            vis.transform.localRotation = visualPrefab.transform.localRotation;
+            // Prefer identity: bake may still carry a legacy root yaw that sides rockets under the mount.
+            bool isRocket = name == HeavypinConstants.RocketVisualName;
+            vis.transform.localRotation = isRocket
+                ? Quaternion.identity
+                : visualPrefab.transform.localRotation;
             vis.transform.localScale = Vector3.one * _sharedUniform;
 
             VisualMaterials.StripSceneJunk(vis);

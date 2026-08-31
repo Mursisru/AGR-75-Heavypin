@@ -115,12 +115,7 @@ namespace Heavypin.UnityBake
                 UnityEngine.Object.DestroyImmediate(strip[i]);
         }
 
-        internal static void ApplyRocketYaw(GameObject root)
-        {
-            if (root == null)
-                return;
-            root.transform.localRotation = Quaternion.FromToRotation(Vector3.left, Vector3.forward);
-        }
+        // Mesh-only empties (Camera*) stripped; dummies kept.
 
         internal static float MeasureLongest(GameObject root)
         {

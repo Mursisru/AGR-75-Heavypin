@@ -34,8 +34,7 @@ namespace Heavypin
             PendingMounts.Enqueue(mount);
             HeavypinMountVisual.HideFired(mount);
             SyncSharedInfo(mount);
-            if (mount != null)
-                HeavypinAnim.Play(VisualStamp.FindRocket(mount.transform));
+            // Fin anim only after drop (DeployFins) — not on rail fire.
         }
 
         internal static bool HasRecentFire() =>
@@ -199,7 +198,7 @@ namespace Heavypin
             bool displayOnly = fireTarget == null && !HasRecentFire();
             if (!displayOnly)
             {
-                HeavypinAnim.Play(vis);
+                HeavypinAnim.Park(vis); // wait for DeployFins
                 FinishFlight(missile, vis);
             }
             StockVisual.Hide(missile.gameObject);
@@ -223,7 +222,7 @@ namespace Heavypin
             HeavypinMotorFx.Bind(missile);
             if (vis == null)
                 vis = VisualStamp.FindRocket(missile.transform);
-            HeavypinAnim.Play(vis);
+            HeavypinAnim.Park(vis);
             if (tag != null)
                 tag.FlightReady = true;
         }

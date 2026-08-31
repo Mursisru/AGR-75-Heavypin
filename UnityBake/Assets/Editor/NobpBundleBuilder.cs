@@ -210,9 +210,8 @@ namespace Heavypin.UnityBake
                 Debug.Log(
                     $"AGR-75 Heavypin: flatten longest={longest:F3}m uniform={uniformScale:F4} " +
                     $"target={NobpVisualBake.TargetLengthM:F3}m");
+                // Rocket + launcher share Blender axis; mount orients both. No root yaw.
             }
-            // Rocket and launchers are authored along -X; game forward is +Z.
-            NobpVisualBake.ApplyRocketYaw(root);
             NobpVisualBake.ApplyUniformRoot(root, uniformScale);
             NobpVisualBake.LogAabbAndDummies(root, prefabName);
 
@@ -346,11 +345,24 @@ namespace Heavypin.UnityBake
 
         private static string FindTexPath(string texRoot, string blenderName, string kind)
         {
+            // Main slot 2 Материал.004 → same maps as Материал.003 on disk.
+            string mapped = blenderName ?? string.Empty;
+            if (mapped.EndsWith(".004", StringComparison.Ordinal) ||
+                mapped.EndsWith("_004", StringComparison.Ordinal))
+                mapped = mapped.Substring(0, mapped.Length - 4) + ".003";
+
             string[] tries =
             {
                 $"{texRoot}/{blenderName} {kind}.png",
-                $"{texRoot}/Material {kind}.png",
+                $"{texRoot}/{blenderName.Replace('_', '.')} {kind}.png",
+                $"{texRoot}/{mapped} {kind}.png",
+                $"{texRoot}/{mapped.Replace('_', '.')} {kind}.png",
+                $"{texRoot}/Материал.004 {kind}.png",
+                $"{texRoot}/Материал.003 {kind}.png",
+                $"{texRoot}/Материал {kind}.png",
+                $"{texRoot}/Material.004 {kind}.png",
                 $"{texRoot}/Material.003 {kind}.png",
+                $"{texRoot}/Material {kind}.png",
                 $"{texRoot}/Cube-3-001-002-003-004.003 {kind}.png"
             };
             for (int i = 0; i < tries.Length; i++)
