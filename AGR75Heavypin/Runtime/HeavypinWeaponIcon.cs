@@ -31,6 +31,7 @@ namespace Heavypin.Runtime
                     return null;
                 }
                 ShadeToAlpha(tex);
+                tex = FlipVerticalNative(tex);
                 tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
                 _sprite = Sprite.Create(
                     tex,
@@ -74,6 +75,31 @@ namespace Heavypin.Runtime
                 px[i] = new Color32(255, 255, 255, (byte)a);
             }
             tex.SetPixels32(px);
+        }
+
+        // Native PNG size — vertical flip only.
+        private static Texture2D FlipVerticalNative(Texture2D src)
+        {
+            int w = src.width;
+            int h = src.height;
+            if (w < 2 || h < 2)
+                return src;
+
+            Color32[] px = src.GetPixels32();
+            var dst = new Color32[px.Length];
+            for (int y = 0; y < h; y++)
+            {
+                int srcRow = y * w;
+                int dstRow = (h - 1 - y) * w;
+                Array.Copy(px, srcRow, dst, dstRow, w);
+            }
+
+            var flipped = new Texture2D(w, h, TextureFormat.RGBA32, false, linear: false);
+            flipped.name = src.name;
+            flipped.filterMode = FilterMode.Bilinear;
+            flipped.SetPixels32(dst);
+            UnityEngine.Object.Destroy(src);
+            return flipped;
         }
 
         private static byte[]? ReadBytes()

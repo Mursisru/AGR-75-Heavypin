@@ -186,6 +186,8 @@ namespace Heavypin.UnityBake
                     if (mat.shader == null || mat.shader.name.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
                         mat.shader = lit;
                     ApplyDiskMaps(mat, blenderName, assetsRoot, texFolder);
+                    if (IsMat004Name(blenderName))
+                        ApplyGlassBake(mat);
                     if (mat.HasProperty("_EmissionColor"))
                         mat.SetColor("_EmissionColor", Color.black);
                     mat.DisableKeyword("_EMISSION");
@@ -322,9 +324,12 @@ namespace Heavypin.UnityBake
                     mat.SetTexture("_BaseMap", color);
             }
             string normalPath = FindTexPath(texRoot, blenderName, "Normal");
+            string colorPath = FindTexPath(texRoot, blenderName, "Color");
+            if (!string.IsNullOrEmpty(colorPath))
+                ConfigureTextureImport(colorPath, asNormal: false, alphaIsTransparency: IsMat004Name(blenderName));
             if (!string.IsNullOrEmpty(normalPath))
             {
-                ConfigureTextureImport(normalPath, asNormal: true);
+                ConfigureTextureImport(normalPath, asNormal: true, alphaIsTransparency: false);
                 Texture2D normal = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
                 if (normal != null)
                 {
@@ -345,23 +350,15 @@ namespace Heavypin.UnityBake
 
         private static string FindTexPath(string texRoot, string blenderName, string kind)
         {
-            // Main slot 2 Материал.004 → same maps as Материал.003 on disk.
-            string mapped = blenderName ?? string.Empty;
-            if (mapped.EndsWith(".004", StringComparison.Ordinal) ||
-                mapped.EndsWith("_004", StringComparison.Ordinal))
-                mapped = mapped.Substring(0, mapped.Length - 4) + ".003";
-
             string[] tries =
             {
                 $"{texRoot}/{blenderName} {kind}.png",
                 $"{texRoot}/{blenderName.Replace('_', '.')} {kind}.png",
-                $"{texRoot}/{mapped} {kind}.png",
-                $"{texRoot}/{mapped.Replace('_', '.')} {kind}.png",
                 $"{texRoot}/Материал.004 {kind}.png",
-                $"{texRoot}/Материал.003 {kind}.png",
-                $"{texRoot}/Материал {kind}.png",
                 $"{texRoot}/Material.004 {kind}.png",
+                $"{texRoot}/Материал.003 {kind}.png",
                 $"{texRoot}/Material.003 {kind}.png",
+                $"{texRoot}/Материал {kind}.png",
                 $"{texRoot}/Material {kind}.png",
                 $"{texRoot}/Cube-3-001-002-003-004.003 {kind}.png"
             };
@@ -389,7 +386,7 @@ namespace Heavypin.UnityBake
             return null;
         }
 
-        private static void ConfigureTextureImport(string assetPath, bool asNormal)
+        private static void ConfigureTextureImport(string assetPath, bool asNormal, bool alphaIsTransparency)
         {
             TextureImporter imp = AssetImporter.GetAtPath(assetPath) as TextureImporter;
             if (imp == null)
@@ -400,6 +397,16 @@ namespace Heavypin.UnityBake
                 imp.textureType = TextureImporterType.NormalMap;
                 dirty = true;
             }
+            if (!asNormal && imp.textureType != TextureImporterType.Default)
+            {
+                imp.textureType = TextureImporterType.Default;
+                dirty = true;
+            }
+            if (alphaIsTransparency && !imp.alphaIsTransparency)
+            {
+                imp.alphaIsTransparency = true;
+                dirty = true;
+            }
             if (!imp.mipmapEnabled)
             {
                 imp.mipmapEnabled = true;
@@ -407,6 +414,31 @@ namespace Heavypin.UnityBake
             }
             if (dirty)
                 imp.SaveAndReimport();
+        }
+
+        private static bool IsMat004Name(string blenderName)
+        {
+            if (string.IsNullOrEmpty(blenderName))
+                return false;
+            return blenderName.EndsWith(".004", StringComparison.Ordinal) ||
+                   blenderName.EndsWith("_004", StringComparison.Ordinal) ||
+                   blenderName.EndsWith("004", StringComparison.Ordinal);
+        }
+
+        private static void ApplyGlassBake(Material mat)
+        {
+            if (mat == null)
+                return;
+            mat.SetFloat("_Mode", 3f);
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            mat.SetInt("_ZWrite", 0);
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.EnableKeyword("_ALPHABLEND_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.renderQueue = 3000;
+            mat.SetFloat("_Glossiness", 0.92f);
+            mat.SetFloat("_Metallic", 0f);
         }
 
         private static void ConfigureImporter(string fbxPath, bool importAnim)

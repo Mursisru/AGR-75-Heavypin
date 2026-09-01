@@ -51,7 +51,7 @@ namespace Heavypin.Runtime
                 if (dummy == null || slot == null)
                     continue;
                 slot.position = dummy.position;
-                slot.rotation = launcher.rotation;
+                slot.rotation = mountGo.transform.rotation;
             }
         }
     }

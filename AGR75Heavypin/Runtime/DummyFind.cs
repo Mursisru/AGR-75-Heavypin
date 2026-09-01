@@ -88,12 +88,10 @@ namespace Heavypin.Runtime
         private static bool StartsWith(string name, string prefix) =>
             name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
 
-        private static int CompareDummyName(Transform a, Transform b)
-        {
-            return DummySortKey(a.name).CompareTo(DummySortKey(b.name));
-        }
+        internal static int CompareDummyName(Transform a, Transform b) =>
+            DummySortKey(a.name).CompareTo(DummySortKey(b.name));
 
-        private static int DummySortKey(string name)
+        internal static int DummySortKey(string name)
         {
             int dot = name.LastIndexOf('.');
             if (dot < 0 || dot >= name.Length - 1)

@@ -51,6 +51,7 @@ namespace Heavypin.Patches
                 weaponMount.prefab.SetActive(false);
             }
             PrefabFactory.ActivateMountedInstance(__result);
+            HeavypinAnim.ParkMount(__result);
         }
     }
 
@@ -198,6 +199,13 @@ namespace Heavypin.Patches
             HeavypinSpawnGate.SyncSharedInfo(__instance);
             HeavypinSpawnGate.NoteFire(__instance, target);
         }
+
+        private static void Postfix(MountedMissile __instance)
+        {
+            if (__instance?.info == null || !HeavypinBootstrap.IsOurInfo(__instance.info))
+                return;
+            HeavypinMountVisual.HideFired(__instance);
+        }
     }
 
     [HarmonyPatch(typeof(Missile), "StartMissile")]
@@ -227,7 +235,9 @@ namespace Heavypin.Patches
         {
             if (!HeavypinBootstrap.IsOurs(__instance))
                 return;
-            HeavypinAnim.Play(VisualStamp.FindRocket(__instance.transform));
+            Transform? vis = VisualStamp.FindRocket(__instance.transform);
+            HeavypinMotorFx.Ensure(__instance);
+            HeavypinAnim.Play(vis);
         }
     }
 

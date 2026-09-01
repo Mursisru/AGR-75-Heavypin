@@ -1,5 +1,4 @@
 using System.Reflection;
-using Heavypin.Bootstrap;
 using UnityEngine;
 
 namespace Heavypin.Runtime
@@ -15,14 +14,14 @@ namespace Heavypin.Runtime
                 return;
             StopDeployFx(mount);
             SilenceSlotFx(mount.gameObject);
-            SetRocketVis(mount.gameObject, visible: false);
+            HeavypinLauncherRockets.HideEmbedded(mount);
         }
 
         internal static void Restore(MountedMissile? mount)
         {
             if (mount == null)
                 return;
-            SetRocketVis(mount.gameObject, visible: true);
+            HeavypinLauncherRockets.RestoreEmbedded(mount);
         }
 
         private static void StopDeployFx(MountedMissile mount)
@@ -55,21 +54,6 @@ namespace Heavypin.Runtime
                 ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
                 ps.gameObject.SetActive(false);
             }
-        }
-
-        private static void SetRocketVis(GameObject host, bool visible)
-        {
-            Transform? vis = PrefabFactory.FindRocketVisual(host.transform);
-            if (vis == null)
-                return;
-            vis.gameObject.SetActive(visible);
-            Renderer[] rs = vis.GetComponentsInChildren<Renderer>(true);
-            for (int i = 0; i < rs.Length; i++)
-            {
-                if (rs[i] != null && StockVisual.IsOurs(rs[i]))
-                    rs[i].enabled = visible;
-            }
-            StockVisual.Hide(host);
         }
     }
 }

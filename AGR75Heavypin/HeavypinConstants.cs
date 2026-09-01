@@ -17,12 +17,19 @@ namespace Heavypin
 
         public const string RocketVisualName = "HeavypinRocket";
         public const string LauncherVisualName = "HeavypinLauncher";
+        public const string LauncherEmbeddedRocketName = "Rocket";
         public const string BundleModName = "AGR75Heavypin";
         public const string NobpFileName = "AGR75Heavypin.nobp";
         public const string PreviewIconFileName = "AGR-Preview.png";
         public const string PreviewIconResource = "Heavypin.Resources.AGR-Preview.png";
         public const int PreviewIconAlphaBase = 255;
         public const int PreviewIconDarkLuma = 145;
+        public const int PreviewIconSquareSize = 512;
+
+        // Blender axis fix: launcher root + fly HeavypinRocket (embedded rockets inherit launcher yaw).
+        public const float VisualMountYawDeg = 90f;
+        public const float LauncherLiftM = 0.05f;
+        public const float LauncherForwardM = 0.20f;
 
         public const string Agr24Name = "AGR-24";
         public const string Agr24Alt = "Kingpin";

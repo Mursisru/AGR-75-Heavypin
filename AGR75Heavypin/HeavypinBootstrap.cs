@@ -51,6 +51,8 @@ namespace Heavypin
 
                 HeavypinMotorFx.Capture(enc, agr24);
 
+                HeavypinMaterialDonor.Ensure();
+
                 if (Encyclopedia.Lookup != null &&
                     Encyclopedia.Lookup.TryGetValue(HeavypinConstants.MissileJsonKey, out UnitDefinition existing) &&
                     existing is MissileDefinition md && md.unitPrefab != null)
@@ -318,7 +320,7 @@ namespace Heavypin
         private static void RefreshMount(WeaponMount mount, WeaponInfo info, int slots)
         {
             NobpContent.TryLoad();
-            if (mount.prefab != null && NobpContent.RocketPrefab != null)
+            if (mount.prefab != null)
                 StampMount(mount.prefab, slots);
             mount.info = info;
             mount.sortWeapons = true;
@@ -332,9 +334,9 @@ namespace Heavypin
         {
             NobpContent.TryLoad();
             GameObject? launcher = NobpContent.LauncherForSlots(slots);
-            if (launcher == null || NobpContent.RocketPrefab == null || mountGo == null)
+            if (launcher == null || mountGo == null)
                 return;
-            VisualStamp.StampMountTemplate(mountGo, launcher, NobpContent.RocketPrefab, slots);
+            VisualStamp.StampMountTemplate(mountGo, launcher, slots);
         }
 
         private static void BindMountedInfo(WeaponMount mount, WeaponInfo info)

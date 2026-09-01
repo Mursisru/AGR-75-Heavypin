@@ -21,10 +21,13 @@ namespace Heavypin.Runtime
             }
         }
 
-        internal static void ApplyFbxLook(GameObject root)
+        // flyRocket: clone launcher embedded Rocket slots (Materials/Launcher bake), not Rocket prefab bake.
+        internal static void ApplyFbxLook(GameObject root, bool flyRocket = false)
         {
             if (root == null)
                 return;
+            if (flyRocket)
+                HeavypinMaterialDonor.Ensure();
             StripSceneJunk(root);
             int n = 0;
             Renderer[] rs = root.GetComponentsInChildren<Renderer>(true);
@@ -40,6 +43,7 @@ namespace Heavypin.Runtime
                     continue;
                 if (r is SkinnedMeshRenderer skinChk && skinChk.sharedMesh == null)
                     continue;
+
                 Material[] src = r.sharedMaterials;
                 int slots = src != null && src.Length > 0 ? src.Length : 1;
                 Material[] dst = new Material[slots];
@@ -47,38 +51,46 @@ namespace Heavypin.Runtime
                 {
                     Material? old = src != null && m < src.Length ? src[m] : null;
                     string matName = old != null && !string.IsNullOrEmpty(old.name) ? old.name : r.gameObject.name;
-                    Material mat = VisualShader.Make(matName + "_hp", cull: 0f);
-                    Texture? albedo = HeavypinMaps.Albedo(matName);
-                    if (albedo == null)
+
+                    if (flyRocket && HeavypinMaterialDonor.TryClone(matName, out Material? donated) && donated != null)
                     {
-                        string? fb = MatFallback(matName);
-                        if (!string.IsNullOrEmpty(fb))
-                            albedo = HeavypinMaps.Albedo(fb!);
+                        dst[m] = donated;
+                        n++;
+                        continue;
                     }
-                    if (albedo == null)
-                        albedo = PeekAlbedo(old);
-                    bool albedoOwns = albedo != null;
-                    if (albedo != null)
-                        WriteAlbedo(mat, albedo);
+
+                    Material? bakeRef = flyRocket
+                        ? HeavypinMaterialDonor.GetBaked(matName) ?? old
+                        : old;
+                    bool isGlass = HeavypinMat004.IsName(bakeRef?.name ?? matName) ||
+                                   HeavypinMat004.IsMainGlassSlot(r.gameObject.name, m, slots);
+
+                    if (isGlass)
+                    {
+                        Material mat = VisualShader.MakeGlass(matName + "_hp");
+                        Texture? albedo = HeavypinMaps.Albedo(matName) ?? PeekAlbedo(bakeRef);
+                        if (albedo == null)
+                            albedo = HeavypinMaps.Albedo("Материал.004");
+                        HeavypinMat004.ApplyGlass(mat, albedo);
+                        ApplyNormal(mat, matName, bakeRef);
+                        KillEmission(mat);
+                        HeavypinLook.ApplyFromBaked(mat, bakeRef, albedo != null);
+                        dst[m] = mat;
+                        n++;
+                        continue;
+                    }
+
+                    Material opaque = VisualShader.Make(matName + "_hp", cull: 0f);
+                    Texture? alb = HeavypinMaps.Albedo(matName) ?? PeekAlbedo(bakeRef);
+                    bool albedoOwns = alb != null;
+                    if (alb != null)
+                        WriteAlbedo(opaque, alb);
                     else
-                        ClearAlbedoMaps(mat);
-                    Texture2D? nml = HeavypinMaps.Normal(matName);
-                    if (nml == null)
-                    {
-                        string? fbN = MatFallback(matName);
-                        if (!string.IsNullOrEmpty(fbN))
-                            nml = HeavypinMaps.Normal(fbN!);
-                    }
-                    if (nml != null)
-                        ApplyDiskNormal(mat, nml, old);
-                    else
-                    {
-                        CopyMap(old, mat, "_BumpMap", "_BumpMap");
-                        CopyMap(old, mat, "_BumpMap", "_NormalMap");
-                    }
-                    KillEmission(mat);
-                    HeavypinLook.ApplyFromBaked(mat, old, albedoOwns);
-                    dst[m] = mat;
+                        ClearAlbedoMaps(opaque);
+                    ApplyNormal(opaque, matName, bakeRef);
+                    KillEmission(opaque);
+                    HeavypinLook.ApplyFromBaked(opaque, bakeRef, albedoOwns);
+                    dst[m] = opaque;
                     n++;
                 }
                 r.sharedMaterials = dst;
@@ -86,7 +98,7 @@ namespace Heavypin.Runtime
                 r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.TwoSided;
                 r.receiveShadows = true;
             }
-            HeavypinPlugin.ModLog?.LogInfo($"VisualMaterials FBX-look '{root.name}' slots={n}");
+            HeavypinPlugin.ModLog?.LogInfo($"VisualMaterials baked '{root.name}' fly={flyRocket} slots={n}");
         }
 
         internal static void MatchHostDrawState(GameObject vis, GameObject host)
@@ -132,20 +144,23 @@ namespace Heavypin.Runtime
             }
         }
 
-        private static void ApplyDiskNormal(Material mat, Texture2D nml, Material? baked)
+        private static void ApplyNormal(Material mat, string matName, Material? baked)
         {
-            Texture? bump = baked != null && baked.HasProperty("_BumpMap") ? baked.GetTexture("_BumpMap") : null;
-            if (bump == null)
-                bump = nml;
-            if (bump == null)
+            Texture2D? nml = HeavypinMaps.Normal(matName);
+            if (nml != null)
+            {
+                Texture? bump = nml;
+                if (mat.HasProperty("_BumpMap"))
+                    mat.SetTexture("_BumpMap", bump);
+                if (mat.HasProperty("_NormalMap"))
+                    mat.SetTexture("_NormalMap", bump);
+                if (mat.HasProperty("_BumpScale"))
+                    mat.SetFloat("_BumpScale", 1f);
+                mat.EnableKeyword("_NORMALMAP");
                 return;
-            if (mat.HasProperty("_BumpMap"))
-                mat.SetTexture("_BumpMap", bump);
-            if (mat.HasProperty("_NormalMap"))
-                mat.SetTexture("_NormalMap", bump);
-            if (mat.HasProperty("_BumpScale"))
-                mat.SetFloat("_BumpScale", 1f);
-            mat.EnableKeyword("_NORMALMAP");
+            }
+            CopyMap(baked, mat, "_BumpMap", "_BumpMap");
+            CopyMap(baked, mat, "_BumpMap", "_NormalMap");
         }
 
         private static void CopyMap(Material? src, Material dst, string srcProp, string dstProp)
@@ -167,23 +182,6 @@ namespace Heavypin.Runtime
                 mat.SetTexture("_EmissionMap", null);
             mat.DisableKeyword("_EMISSION");
             mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
-        }
-
-        // Main slot 2: Материал.004 → Материал.003 disk stem. Empty = no extra try.
-        private static string? MatFallback(string matName)
-        {
-            if (string.IsNullOrEmpty(matName))
-                return null;
-            string n = matName;
-            int inst = n.LastIndexOf(" (Instance)", System.StringComparison.OrdinalIgnoreCase);
-            if (inst > 0)
-                n = n.Substring(0, inst);
-            if (n.EndsWith(".004", System.StringComparison.Ordinal) ||
-                n.EndsWith("_004", System.StringComparison.Ordinal))
-                return n.Substring(0, n.Length - 4) + ".003";
-            if (n.EndsWith("004", System.StringComparison.Ordinal))
-                return n.Substring(0, n.Length - 3) + "003";
-            return null;
         }
 
         private static Texture? PeekAlbedo(Material? mat)

@@ -36,6 +36,173 @@ namespace Heavypin.Runtime
             return mat;
         }
 
+        internal static Material MakeGlass(string name)
+        {
+            Material mat = _template != null ? new Material(_template) : new Material(Resolve());
+            mat.name = name;
+            StripInheritedMaps(mat);
+            return mat;
+        }
+
+        // Runtime: keep nobp bake as-is. Standard → URP Lit copies baked maps/tints/mode only.
+        internal static Material InstanceBaked(Material? src)
+        {
+            if (src == null)
+                return new Material(Resolve());
+            if (src.shader != null && IsUrpMeshLit(src.shader.name))
+            {
+                Material urpClone = new Material(src);
+                WipeEmission(urpClone);
+                return urpClone;
+            }
+            if (src.shader != null && IsStandardShader(src.shader.name))
+                return RemapStandardToUrp(src);
+            Material clone = new Material(src);
+            WipeEmission(clone);
+            return clone;
+        }
+
+        private static bool IsStandardShader(string? name)
+        {
+            if (name is not { Length: > 0 } n)
+                return false;
+            return string.Equals(n, "Standard", System.StringComparison.OrdinalIgnoreCase) ||
+                   n.IndexOf("Legacy Shaders/", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static Material RemapStandardToUrp(Material src)
+        {
+            Material mat = new Material(Resolve());
+            mat.name = src.name;
+
+            CopyTex(src, mat, "_MainTex", "_BaseMap");
+            CopyTex(src, mat, "_MainTex", "_MainTex");
+            CopyTex(src, mat, "_BumpMap", "_BumpMap");
+            CopyTex(src, mat, "_BumpMap", "_NormalMap");
+            CopyTex(src, mat, "_MetallicGlossMap", "_MetallicGlossMap");
+            CopyTex(src, mat, "_OcclusionMap", "_OcclusionMap");
+            ResetSt(mat, "_BaseMap");
+            ResetSt(mat, "_MainTex");
+
+            Color tint = src.HasProperty("_Color") ? src.GetColor("_Color") : Color.white;
+            if (mat.HasProperty("_BaseColor"))
+                mat.SetColor("_BaseColor", tint);
+            if (mat.HasProperty("_Color"))
+                mat.SetColor("_Color", tint);
+
+            if (src.HasProperty("_Metallic") && mat.HasProperty("_Metallic"))
+                mat.SetFloat("_Metallic", src.GetFloat("_Metallic"));
+            if (src.HasProperty("_Glossiness"))
+            {
+                float g = src.GetFloat("_Glossiness");
+                if (mat.HasProperty("_Smoothness"))
+                    mat.SetFloat("_Smoothness", g);
+                if (mat.HasProperty("_Glossiness"))
+                    mat.SetFloat("_Glossiness", g);
+            }
+            if (src.HasProperty("_BumpScale") && mat.HasProperty("_BumpScale"))
+                mat.SetFloat("_BumpScale", src.GetFloat("_BumpScale"));
+
+            bool transparent = src.HasProperty("_Mode") && src.GetFloat("_Mode") >= 2.5f;
+            if (!transparent && src.renderQueue >= 3000)
+                transparent = true;
+
+            if (transparent)
+            {
+                if (mat.HasProperty("_Surface"))
+                    mat.SetFloat("_Surface", 1f);
+                if (mat.HasProperty("_Blend"))
+                    mat.SetFloat("_Blend", 0f);
+                if (mat.HasProperty("_AlphaClip"))
+                    mat.SetFloat("_AlphaClip", 0f);
+                if (mat.HasProperty("_SrcBlend"))
+                    mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                if (mat.HasProperty("_DstBlend"))
+                    mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                if (mat.HasProperty("_ZWrite"))
+                    mat.SetFloat("_ZWrite", 0f);
+                if (mat.HasProperty("_Cull"))
+                    mat.SetFloat("_Cull", 0f);
+                mat.SetOverrideTag("RenderType", "Transparent");
+                mat.renderQueue = src.renderQueue > 0 ? src.renderQueue : 3000;
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.DisableKeyword("_ALPHATEST_ON");
+                mat.DisableKeyword("_EMISSION");
+            }
+            else
+            {
+                if (mat.HasProperty("_Surface"))
+                    mat.SetFloat("_Surface", 0f);
+                if (mat.HasProperty("_ZWrite"))
+                    mat.SetFloat("_ZWrite", 1f);
+                mat.SetOverrideTag("RenderType", "Opaque");
+                mat.renderQueue = src.renderQueue > 0 ? src.renderQueue : 2000;
+                mat.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            }
+
+            if (mat.GetTexture("_BumpMap") != null || mat.GetTexture("_NormalMap") != null)
+                mat.EnableKeyword("_NORMALMAP");
+
+            WipeEmission(mat);
+            return mat;
+        }
+
+        private static void CopyTex(Material src, Material dst, string srcProp, string dstProp)
+        {
+            if (!src.HasProperty(srcProp) || !dst.HasProperty(dstProp))
+                return;
+            Texture? t = src.GetTexture(srcProp);
+            if (t != null)
+                dst.SetTexture(dstProp, t);
+        }
+
+        private static void WipeEmission(Material mat)
+        {
+            if (mat.HasProperty("_EmissionColor"))
+                mat.SetColor("_EmissionColor", Color.black);
+            if (mat.HasProperty("_EmissiveColor"))
+                mat.SetColor("_EmissiveColor", Color.black);
+            if (mat.HasProperty("_EmissionMap"))
+                mat.SetTexture("_EmissionMap", null);
+            mat.DisableKeyword("_EMISSION");
+            mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+        }
+
+        // Материал.004 — URP transparent (alpha from dedicated Color.png).
+        internal static void ApplyTransmissionGlass(Material mat)
+        {
+            if (mat == null)
+                return;
+            if (mat.HasProperty("_Surface"))
+                mat.SetFloat("_Surface", 1f);
+            if (mat.HasProperty("_Blend"))
+                mat.SetFloat("_Blend", 0f);
+            if (mat.HasProperty("_AlphaClip"))
+                mat.SetFloat("_AlphaClip", 0f);
+            if (mat.HasProperty("_SrcBlend"))
+                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (mat.HasProperty("_DstBlend"))
+                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if (mat.HasProperty("_ZWrite"))
+                mat.SetFloat("_ZWrite", 0f);
+            if (mat.HasProperty("_Cull"))
+                mat.SetFloat("_Cull", 0f);
+            if (mat.HasProperty("_CullMode"))
+                mat.SetFloat("_CullMode", 0f);
+            if (mat.HasProperty("_Metallic"))
+                mat.SetFloat("_Metallic", 0f);
+            if (mat.HasProperty("_Smoothness"))
+                mat.SetFloat("_Smoothness", 0.92f);
+            if (mat.HasProperty("_Glossiness"))
+                mat.SetFloat("_Glossiness", 0.92f);
+            mat.SetOverrideTag("RenderType", "Transparent");
+            mat.renderQueue = 3000;
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.DisableKeyword("_EMISSION");
+        }
+
         internal static void StripInheritedMaps(Material mat)
         {
             if (mat == null)

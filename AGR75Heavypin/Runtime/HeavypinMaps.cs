@@ -36,7 +36,7 @@ namespace Heavypin.Runtime
             if (AlbedoPath.ContainsKey(fold))
                 return fold;
 
-            // Main slot 2: Материал.004 / Материал_004 → Материал.003 maps on disk.
+            // Cyrillic ↔ Material alias + .001 → base body maps when own slot png missing.
             string[] aliases = AliasFolds(fold);
             for (int a = 0; a < aliases.Length; a++)
             {
@@ -57,12 +57,7 @@ namespace Heavypin.Runtime
         {
             if (string.IsNullOrEmpty(fold))
                 return Array.Empty<string>();
-            // Cyrillic Материал.004 / Материал_004 / material004 → material003 / материал003
-            if (fold == "материал004" || fold == "material004" || fold.EndsWith("004", StringComparison.Ordinal))
-            {
-                string base3 = fold.Substring(0, fold.Length - 3) + "003";
-                return new[] { base3, "материал003", "material003", "материал", "material" };
-            }
+            // Main slot 2: own Материал.004 maps (no 003 alias).
             if (fold == "материал001" || fold == "material001" || fold.EndsWith("001", StringComparison.Ordinal))
             {
                 string base0 = fold.Substring(0, fold.Length - 3);
@@ -70,6 +65,16 @@ namespace Heavypin.Runtime
             }
             if (fold == "материал" || fold == "material")
                 return new[] { "материал", "material" };
+            if (fold.StartsWith("материал", StringComparison.Ordinal) && fold.Length > "материал".Length)
+            {
+                string en = "material" + fold.Substring("материал".Length);
+                return new[] { en, fold, "материал", "material" };
+            }
+            if (fold.StartsWith("material", StringComparison.Ordinal) && fold.Length > "material".Length)
+            {
+                string ru = "материал" + fold.Substring("material".Length);
+                return new[] { fold, ru, "material", "материал" };
+            }
             return Array.Empty<string>();
         }
 
@@ -165,25 +170,9 @@ namespace Heavypin.Runtime
             if (string.IsNullOrEmpty(fold))
                 return;
             if (color)
-            {
                 AlbedoPath[fold] = path;
-                Mirror004(AlbedoPath, fold, path);
-            }
             else
-            {
                 NormalPath[fold] = path;
-                Mirror004(NormalPath, fold, path);
-            }
-        }
-
-        // Материал.003 / Material.003 maps also answer Материал.004 lookups.
-        private static void Mirror004(Dictionary<string, string> table, string fold, string path)
-        {
-            if (fold == "материал003" || fold == "material003")
-            {
-                table["материал004"] = path;
-                table["material004"] = path;
-            }
         }
 
         private static string Strip(string? name)

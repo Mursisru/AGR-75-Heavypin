@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Mirage;
 using Heavypin.Runtime;
+using Mirage;
 using UnityEngine;
 
 namespace Heavypin.Bootstrap
@@ -80,6 +80,7 @@ namespace Heavypin.Bootstrap
             }
             EnableGameplayBehaviours(instance);
             EnsureVisualRenderers(instance);
+            HeavypinLauncherRockets.EnsureSlotLinks(instance);
             StockVisual.Hide(instance);
         }
 
@@ -109,6 +110,11 @@ namespace Heavypin.Bootstrap
                     continue;
                 }
                 if (tn == "Missile" || tn.EndsWith("Seeker", StringComparison.Ordinal))
+                {
+                    b.enabled = false;
+                    continue;
+                }
+                if (b is Animator && PrefabFactory.IsOurVisualRoot(b.transform))
                 {
                     b.enabled = false;
                     continue;
@@ -155,12 +161,8 @@ namespace Heavypin.Bootstrap
         private static void EnsureVisualRenderers(GameObject root)
         {
             EnableVis(FindLauncherVisual(root.transform));
-            MountedMissile[] slots = root.GetComponentsInChildren<MountedMissile>(true);
-            for (int i = 0; i < slots.Length; i++)
-            {
-                if (slots[i] != null)
-                    EnableVis(FindRocketVisual(slots[i].transform));
-            }
+            HeavypinLauncherRockets.EnableEmbedded(root);
+            HeavypinLauncherRockets.ParkEmbedded(root);
         }
 
         private static void EnableVis(Transform? vis)

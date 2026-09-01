@@ -34,7 +34,6 @@ namespace Heavypin
             PendingMounts.Enqueue(mount);
             HeavypinMountVisual.HideFired(mount);
             SyncSharedInfo(mount);
-            // Fin anim only after drop (DeployFins) — not on rail fire.
         }
 
         internal static bool HasRecentFire() =>
@@ -187,7 +186,6 @@ namespace Heavypin
             MountedMissile? firedMount = PendingMounts.Count > 0 ? PendingMounts.Dequeue() : null;
             HeavypinMountVisual.HideFired(firedMount);
 
-            HeavypinMotorFx.SilenceStock(missile);
             missile.RCS = HeavypinConstants.RadarSize;
 
             NobpContent.TryLoad();
@@ -198,7 +196,7 @@ namespace Heavypin
             bool displayOnly = fireTarget == null && !HasRecentFire();
             if (!displayOnly)
             {
-                HeavypinAnim.Park(vis); // wait for DeployFins
+                HeavypinAnim.Park(vis);
                 FinishFlight(missile, vis);
             }
             StockVisual.Hide(missile.gameObject);
@@ -218,7 +216,6 @@ namespace Heavypin
                 return;
 
             HeavypinMotors.Apply(missile);
-            HeavypinMotorFx.SilenceStock(missile);
             HeavypinMotorFx.Bind(missile);
             if (vis == null)
                 vis = VisualStamp.FindRocket(missile.transform);

@@ -7,19 +7,22 @@ namespace Heavypin
 {
     internal static class VisualStamp
     {
-        // Same uniform on rocket + both launchers (Blender-matched).
         private static float _sharedUniform = HeavypinConstants.VisualUniformScale;
         private static bool _uniformReady;
+
+        private static readonly Quaternion MountYaw =
+            Quaternion.Euler(0f, HeavypinConstants.VisualMountYawDeg, 0f);
 
         internal static Transform? FindRocket(Transform root) => PrefabFactory.FindRocketVisual(root);
         internal static Transform? FindLauncher(Transform root) => PrefabFactory.FindLauncherVisual(root);
 
-        internal static void StampMountTemplate(GameObject mountGo, GameObject? launcherPrefab, GameObject? rocketPrefab, int slots)
+        // Mount: launcher only. Embedded "Rocket" children are setup in HeavypinLauncherRockets.
+        internal static void StampMountTemplate(GameObject mountGo, GameObject? launcherPrefab, int slots)
         {
-            if (mountGo == null || launcherPrefab == null || rocketPrefab == null)
+            if (mountGo == null || launcherPrefab == null)
                 return;
 
-            EnsureSharedUniform(rocketPrefab);
+            EnsureSharedUniform(launcherPrefab);
 
             Transform? launcher = FindLauncher(mountGo.transform);
             if (launcher == null)
@@ -33,24 +36,17 @@ namespace Heavypin
             }
 
             SlotLayout.EnsureCount(mountGo, slots);
-
-            MountedMissile[] mms = mountGo.GetComponentsInChildren<MountedMissile>(true);
-            int n = 0;
-            for (int i = 0; i < mms.Length; i++)
-            {
-                if (mms[i] != null && StampRocket(mms[i].gameObject, rocketPrefab))
-                    n++;
-            }
-
             ConfigureLauncher(launcher, launcherPrefab);
             SlotLayout.PlaceOnDummies(mountGo, launcher, slots);
+            HeavypinLauncherRockets.SetupMount(mountGo, launcher, slots);
 
             StockVisual.Hide(mountGo);
             mountGo.SetActive(false);
             NetworkPrefabPrep.PrepareTemplate(mountGo);
-            HeavypinPlugin.ModLog?.LogInfo($"Heavypin mount stamp slots={n} want={slots} uniform={_sharedUniform:F4}");
+            HeavypinPlugin.ModLog?.LogInfo($"Heavypin mount stamp slots={slots} uniform={_sharedUniform:F4}");
         }
 
+        // Fly / encyclopedia: stamp HeavypinRocket on shared unitPrefab shell.
         internal static bool StampRocket(GameObject host, GameObject? rocketPrefab)
         {
             if (host == null || rocketPrefab == null)
@@ -68,27 +64,26 @@ namespace Heavypin
                     return false;
             }
 
-            ConfigureRocket(vis, rocketPrefab);
-            HeavypinAnim.Park(vis); // Cube clips stay off on rail until DeployFins
-            VisualMaterials.ApplyFbxLook(vis.gameObject);
+            ConfigureFlyRocket(vis, rocketPrefab);
+            HeavypinAnim.Park(vis);
+            VisualMaterials.ApplyFbxLook(vis.gameObject, flyRocket: true);
             StockVisual.Hide(host);
             return true;
         }
 
-        internal static void ConfigureRocket(Transform vis, GameObject? rocketPrefab = null)
+        internal static void ConfigureFlyRocket(Transform vis, GameObject? rocketPrefab = null)
         {
             if (vis == null)
                 return;
 
             EnsureSharedUniform(rocketPrefab);
-            // Same axis as launcher (Blender-matched). Extra -X→+Z yaw under oriented slots = sideways noses.
             vis.localPosition = Vector3.zero;
-            vis.localRotation = Quaternion.identity;
+            vis.localRotation = MountYaw;
             vis.localScale = Vector3.one * _sharedUniform;
 
             Transform? center = DummyFind.FindRocketCenter(vis);
             if (center == null)
-                HeavypinPlugin.ModLog?.LogWarning("Heavypin: CenterOfModel missing on rocket.");
+                HeavypinPlugin.ModLog?.LogWarning("Heavypin: CenterOfModel missing on fly rocket.");
             else
                 DummySnap.AlignDummyToParent(vis, center);
         }
@@ -99,7 +94,7 @@ namespace Heavypin
                 return;
 
             launcher.localPosition = Vector3.zero;
-            launcher.localRotation = Quaternion.identity;
+            launcher.localRotation = MountYaw;
             launcher.localScale = Vector3.one * _sharedUniform;
 
             Transform? attach = DummyFind.FindPylonAttach(launcher);
@@ -107,18 +102,22 @@ namespace Heavypin
                 DummySnap.AlignDummyToParent(launcher, attach);
             else
                 HeavypinPlugin.ModLog?.LogWarning("Heavypin: PlaceOfDocking missing on launcher.");
+
+            Transform? mount = launcher.parent;
+            Vector3 up = mount != null ? mount.up : Vector3.up;
+            Vector3 fwd = mount != null ? mount.forward : Vector3.forward;
+            launcher.position += up * HeavypinConstants.LauncherLiftM + fwd * HeavypinConstants.LauncherForwardM;
         }
 
-        private static void EnsureSharedUniform(GameObject? rocketPrefab)
+        private static void EnsureSharedUniform(GameObject? prefab)
         {
             if (_uniformReady)
                 return;
 
             float baked = 0f;
-            if (rocketPrefab != null)
-                baked = rocketPrefab.transform.localScale.x;
+            if (prefab != null)
+                baked = prefab.transform.localScale.x;
 
-            // Prefer bake root scale; if bundle lost it (==1), measure native at scale 1.
             if (baked > 0.001f && Mathf.Abs(baked - 1f) > 0.001f)
             {
                 _sharedUniform = baked;
@@ -127,7 +126,7 @@ namespace Heavypin
                 return;
             }
 
-            if (rocketPrefab == null)
+            if (prefab == null)
             {
                 _sharedUniform = HeavypinConstants.VisualUniformScale;
                 _uniformReady = true;
@@ -137,7 +136,7 @@ namespace Heavypin
             GameObject? probe = null;
             try
             {
-                probe = Object.Instantiate(rocketPrefab);
+                probe = Object.Instantiate(prefab);
                 probe.transform.SetParent(null, false);
                 probe.transform.position = Vector3.zero;
                 probe.transform.rotation = Quaternion.identity;
@@ -166,17 +165,17 @@ namespace Heavypin
             vis.hideFlags = HideFlags.None;
             vis.SetActive(true);
             vis.transform.localPosition = Vector3.zero;
-            // Prefer identity: bake may still carry a legacy root yaw that sides rockets under the mount.
             bool isRocket = name == HeavypinConstants.RocketVisualName;
-            vis.transform.localRotation = isRocket
-                ? Quaternion.identity
-                : visualPrefab.transform.localRotation;
+            vis.transform.localRotation = MountYaw;
             vis.transform.localScale = Vector3.one * _sharedUniform;
 
             VisualMaterials.StripSceneJunk(vis);
             StripVisualPhysics(vis);
             VisualMaterials.MatchHostDrawState(vis, host);
             StockVisual.MarkOurs(vis.transform);
+
+            if (isRocket)
+                HeavypinAnim.Park(vis.transform);
 
             Renderer[] rs = vis.GetComponentsInChildren<Renderer>(true);
             for (int i = 0; i < rs.Length; i++)
@@ -191,7 +190,10 @@ namespace Heavypin
                     continue;
                 r.enabled = true;
             }
-            VisualMaterials.ApplyFbxLook(vis);
+            if (!isRocket)
+                VisualMaterials.ApplyFbxLook(vis);
+            else
+                VisualMaterials.ApplyFbxLook(vis);
             return vis.transform;
         }
 
