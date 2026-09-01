@@ -28,6 +28,7 @@ namespace Heavypin
 
         // Blender axis fix: launcher root + fly HeavypinRocket (embedded rockets inherit launcher yaw).
         public const float VisualMountYawDeg = 90f;
+        public const float OpeningPlaybackRate = 4f;
         public const float LauncherLiftM = 0.05f;
         public const float LauncherForwardM = 0.20f;
 

@@ -235,9 +235,8 @@ namespace Heavypin.Patches
         {
             if (!HeavypinBootstrap.IsOurs(__instance))
                 return;
-            Transform? vis = VisualStamp.FindRocket(__instance.transform);
             HeavypinMotorFx.Ensure(__instance);
-            HeavypinAnim.Play(vis);
+            HeavypinAnim.PlayFly(__instance);
         }
     }
 

@@ -241,20 +241,21 @@ namespace Heavypin.UnityBake
             for (int i = 0; i < raw.Length; i++)
                 clips[i] = NobpVisualBake.SanitizeClipFileScale(raw[i], clipFolder);
 
+            AnimationClip merged = MergeFinClips(clips, clipFolder);
+
             string ctrlPath = $"{assetsRoot}/HeavypinRocket.controller";
             AssetDatabase.DeleteAsset(ctrlPath);
             AnimatorController ctrl = AnimatorController.CreateAnimatorControllerAtPath(ctrlPath);
-            BindClipToLayer(ctrl, 0, clips[0]);
-            for (int i = 1; i < clips.Length; i++)
+            BindClipToLayer(ctrl, 0, merged);
+
+            AnimatorControllerLayer[] layers = ctrl.layers;
+            if (layers.Length > 0)
             {
-                ctrl.AddLayer("L" + i);
-                AnimatorControllerLayer[] layers = ctrl.layers;
-                AnimatorControllerLayer layer = layers[i];
-                layer.defaultWeight = 1f;
-                layer.blendingMode = AnimatorLayerBlendingMode.Override;
-                layers[i] = layer;
+                AnimatorControllerLayer baseLayer = layers[0];
+                baseLayer.defaultWeight = 1f;
+                baseLayer.blendingMode = AnimatorLayerBlendingMode.Override;
+                layers[0] = baseLayer;
                 ctrl.layers = layers;
-                BindClipToLayer(ctrl, i, clips[i]);
             }
 
             Animator animator = root.GetComponent<Animator>();
@@ -262,8 +263,67 @@ namespace Heavypin.UnityBake
                 animator = root.AddComponent<Animator>();
             animator.runtimeAnimatorController = ctrl;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            animator.keepAnimatorStateOnDisable = true;
+            animator.writeDefaultValuesOnDisable = false;
             animator.enabled = false; // hangar: off until DeployFins / HeavypinAnim.Play
-            Debug.Log($"AGR-75 Heavypin: animator own-clips={clips.Length} first='{clips[0].name}'");
+            Debug.Log($"AGR-75 Heavypin: animator merged fins clip='{merged.name}' sources={clips.Length}");
+        }
+
+        private static AnimationClip MergeFinClips(AnimationClip[] clips, string folder)
+        {
+            const string mergedName = "DeployFins";
+            string path = $"{folder}/{mergedName}.anim";
+            AnimationClip? merged = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+            if (merged == null)
+            {
+                merged = new AnimationClip { name = mergedName };
+                AssetDatabase.CreateAsset(merged, path);
+            }
+            else
+            {
+                merged.ClearCurves();
+                merged.name = mergedName;
+            }
+
+            if (clips.Length > 0 && clips[0] != null)
+            {
+                merged.frameRate = clips[0].frameRate;
+                merged.wrapMode = clips[0].wrapMode;
+                AnimationUtility.SetAnimationClipSettings(merged, AnimationUtility.GetAnimationClipSettings(clips[0]));
+            }
+
+            float maxLen = 0f;
+            for (int i = 0; i < clips.Length; i++)
+            {
+                AnimationClip src = clips[i];
+                if (src == null)
+                    continue;
+                if (src.length > maxLen)
+                    maxLen = src.length;
+
+                EditorCurveBinding[] bindings = AnimationUtility.GetCurveBindings(src);
+                for (int b = 0; b < bindings.Length; b++)
+                {
+                    AnimationCurve? curve = AnimationUtility.GetEditorCurve(src, bindings[b]);
+                    if (curve != null)
+                        AnimationUtility.SetEditorCurve(merged, bindings[b], curve);
+                }
+
+                EditorCurveBinding[] objBindings = AnimationUtility.GetObjectReferenceCurveBindings(src);
+                for (int b = 0; b < objBindings.Length; b++)
+                {
+                    ObjectReferenceKeyframe[] keys = AnimationUtility.GetObjectReferenceCurve(src, objBindings[b]);
+                    if (keys != null)
+                        AnimationUtility.SetObjectReferenceCurve(merged, objBindings[b], keys);
+                }
+            }
+
+            AnimationClipSettings settings = AnimationUtility.GetAnimationClipSettings(merged);
+            settings.loopTime = false;
+            AnimationUtility.SetAnimationClipSettings(merged, settings);
+            EditorUtility.SetDirty(merged);
+            Debug.Log($"AGR-75 Heavypin: merged {clips.Length} fin clips length={maxLen:F2}s");
+            return merged;
         }
 
         private static void BindClipToLayer(AnimatorController ctrl, int layer, AnimationClip clip)
@@ -271,6 +331,7 @@ namespace Heavypin.UnityBake
             AnimatorStateMachine sm = ctrl.layers[layer].stateMachine;
             AnimatorState state = sm.defaultState ?? sm.AddState(clip.name);
             state.motion = clip;
+            state.writeDefaultValues = false;
             sm.defaultState = state;
         }
 

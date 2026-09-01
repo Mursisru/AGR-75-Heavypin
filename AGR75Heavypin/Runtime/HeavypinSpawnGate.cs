@@ -11,6 +11,7 @@ namespace Heavypin
     {
         internal bool FlightReady;
         internal bool VisualReady;
+        internal bool FinsOpen;
     }
 
     internal static class HeavypinSpawnGate
@@ -196,8 +197,8 @@ namespace Heavypin
             bool displayOnly = fireTarget == null && !HasRecentFire();
             if (!displayOnly)
             {
-                HeavypinAnim.Park(vis);
                 FinishFlight(missile, vis);
+                HeavypinAnim.Play(vis);
             }
             StockVisual.Hide(missile.gameObject);
             HeavypinTag? ready = missile.GetComponent<HeavypinTag>();
@@ -219,7 +220,8 @@ namespace Heavypin
             HeavypinMotorFx.Bind(missile);
             if (vis == null)
                 vis = VisualStamp.FindRocket(missile.transform);
-            HeavypinAnim.Park(vis);
+            if (tag == null || !tag.FinsOpen)
+                HeavypinAnim.Park(vis);
             if (tag != null)
                 tag.FlightReady = true;
         }

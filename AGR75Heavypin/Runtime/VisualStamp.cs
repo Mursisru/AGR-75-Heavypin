@@ -65,7 +65,9 @@ namespace Heavypin
             }
 
             ConfigureFlyRocket(vis, rocketPrefab);
-            HeavypinAnim.Park(vis);
+            HeavypinTag? tag = host.GetComponent<HeavypinTag>() ?? vis.GetComponentInParent<HeavypinTag>();
+            if (tag == null || !tag.FinsOpen)
+                HeavypinAnim.Park(vis);
             VisualMaterials.ApplyFbxLook(vis.gameObject, flyRocket: true);
             StockVisual.Hide(host);
             return true;

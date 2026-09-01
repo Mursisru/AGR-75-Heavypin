@@ -1,4 +1,5 @@
-using Heavypin.Bootstrap;
+using Heavypin;
+using Heavypin.Blueprinter;
 using UnityEngine;
 
 namespace Heavypin.Runtime
@@ -9,75 +10,42 @@ namespace Heavypin.Runtime
         {
             if (vis == null)
                 return;
-
-            ResetFinCubes(vis);
-
-            Animator[] animators = vis.GetComponentsInChildren<Animator>(true);
-            for (int i = 0; i < animators.Length; i++)
-            {
-                Animator a = animators[i];
-                if (a == null)
-                    continue;
-                a.applyRootMotion = false;
-                a.speed = 0f;
-                if (a.runtimeAnimatorController != null)
-                {
-                    a.Rebind();
-                    a.Update(0f);
-                    for (int layer = 0; layer < a.layerCount; layer++)
-                    {
-                        AnimatorStateInfo info = a.GetCurrentAnimatorStateInfo(layer);
-                        if (info.fullPathHash != 0)
-                            a.Play(info.fullPathHash, layer, 0f);
-                    }
-                    a.Update(0f);
-                }
-                a.enabled = false;
-            }
-
-            Animation[] legacy = vis.GetComponentsInChildren<Animation>(true);
-            for (int i = 0; i < legacy.Length; i++)
-            {
-                Animation an = legacy[i];
-                if (an == null)
-                    continue;
-                an.Stop();
-                an.enabled = false;
-            }
+            HeavypinTag? tag = vis.GetComponentInParent<HeavypinTag>();
+            if (tag != null && tag.FinsOpen)
+                return;
+            HeavypinOpening.PoseClosed(vis);
         }
 
         internal static void Play(Transform? vis)
         {
             if (vis == null)
                 return;
-            Animator[] animators = vis.GetComponentsInChildren<Animator>(true);
-            for (int i = 0; i < animators.Length; i++)
+            HeavypinOpening.Play(vis);
+        }
+
+        internal static void PlayFly(Missile? missile)
+        {
+            if (missile == null)
+                return;
+
+            HeavypinSpawnGate.Ensure(missile);
+            Transform? vis = VisualStamp.FindRocket(missile.transform);
+            if (vis == null)
             {
-                Animator a = animators[i];
-                if (a == null || a.runtimeAnimatorController == null)
-                    continue;
-                a.applyRootMotion = false;
-                a.speed = 1f;
-                a.enabled = true;
-                a.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-                for (int layer = 0; layer < a.layerCount; layer++)
-                {
-                    AnimatorStateInfo info = a.GetCurrentAnimatorStateInfo(layer);
-                    if (info.fullPathHash != 0)
-                        a.Play(info.fullPathHash, layer, 0f);
-                }
-                a.Update(0f);
+                NobpContent.TryLoad();
+                if (NobpContent.RocketPrefab != null)
+                    VisualStamp.StampRocket(missile.gameObject, NobpContent.RocketPrefab);
+                vis = VisualStamp.FindRocket(missile.transform);
             }
 
-            Animation[] legacy = vis.GetComponentsInChildren<Animation>(true);
-            for (int i = 0; i < legacy.Length; i++)
+            if (vis == null)
             {
-                Animation an = legacy[i];
-                if (an == null)
-                    continue;
-                an.enabled = true;
-                an.Play();
+                HeavypinPlugin.ModLog?.LogWarning("HeavypinAnim.PlayFly: HeavypinRocket missing.");
+                return;
             }
+
+            HeavypinOpening.Play(vis);
+            HeavypinPlugin.ModLog?.LogInfo($"HeavypinOpening deploy vis='{vis.name}'");
         }
 
         internal static void ParkMount(GameObject? mount)
@@ -85,22 +53,6 @@ namespace Heavypin.Runtime
             if (mount == null)
                 return;
             HeavypinLauncherRockets.ParkEmbedded(mount);
-        }
-
-        private static void ResetFinCubes(Transform vis)
-        {
-            Transform[] all = vis.GetComponentsInChildren<Transform>(true);
-            for (int i = 0; i < all.Length; i++)
-            {
-                Transform t = all[i];
-                if (t == null || t == vis)
-                    continue;
-                string n = t.name;
-                if (string.IsNullOrEmpty(n) || !n.StartsWith("Cube-", System.StringComparison.Ordinal))
-                    continue;
-                t.localPosition = Vector3.zero;
-                t.localScale = Vector3.one;
-            }
         }
     }
 }
