@@ -213,17 +213,20 @@ namespace Heavypin
             missile.RCS = HeavypinConstants.RadarSize;
 
             HeavypinTag? tag = missile.GetComponent<HeavypinTag>();
-            if (tag != null && tag.FlightReady)
-                return;
+            if (tag == null || !tag.FlightReady)
+            {
+                HeavypinMotors.Apply(missile);
+                if (tag != null)
+                    tag.FlightReady = true;
+            }
 
-            HeavypinMotors.Apply(missile);
+            HeavypinAero.Apply(missile);
             HeavypinMotorFx.Bind(missile);
+
             if (vis == null)
                 vis = VisualStamp.FindRocket(missile.transform);
             if (tag == null || !tag.FinsOpen)
                 HeavypinAnim.Park(vis);
-            if (tag != null)
-                tag.FlightReady = true;
         }
 
         internal static void Ensure(Missile missile)

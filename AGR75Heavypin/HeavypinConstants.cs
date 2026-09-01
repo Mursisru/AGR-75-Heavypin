@@ -25,6 +25,7 @@ namespace Heavypin
         public const int PreviewIconAlphaBase = 255;
         public const int PreviewIconDarkLuma = 145;
         public const int PreviewIconSquareSize = 512;
+        public const float PreviewIconVerticalScale = 0.9f;
 
         // Blender axis fix: launcher root + fly HeavypinRocket (embedded rockets inherit launcher yaw).
         public const float VisualMountYawDeg = 90f;
@@ -67,6 +68,9 @@ namespace Heavypin
         public const float DesignTopSpeedMach = 2.2f;
         public const float SeaLevelSpeedOfSoundMps = 340f;
         public const float DesignTopSpeedMps = DesignTopSpeedMach * SeaLevelSpeedOfSoundMps;
+
+        // Missile.ApplyAero: lift and drag scale with finArea / currentFinArea.
+        public const float GlideFinAreaScale = 2.5f;
 
         public const string DummyRocketCenter = "CenterOfModel";
         public const string DummyLauncherCenter = "CenterOfModel";

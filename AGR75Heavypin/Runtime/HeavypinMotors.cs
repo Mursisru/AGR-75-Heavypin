@@ -76,6 +76,7 @@ namespace Heavypin.Runtime
                 fields[i].SetValue(dst, fields[i].GetValue(src));
             WriteBool(dst, "activated", false);
             WritePrivateFloat(dst, "burnRate", 0f);
+            WritePrivateFloat(dst, "thrustVectoring", 0f);
             FieldInfo? startup = MotorType.GetField("startupSource", BindingFlags.Instance | BindingFlags.NonPublic);
             startup?.SetValue(dst, null);
             EnsureEmptyArray(dst, "particleSystems");

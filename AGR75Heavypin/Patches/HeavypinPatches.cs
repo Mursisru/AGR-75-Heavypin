@@ -235,8 +235,8 @@ namespace Heavypin.Patches
         {
             if (!HeavypinBootstrap.IsOurs(__instance))
                 return;
-            HeavypinMotorFx.Ensure(__instance);
             HeavypinAnim.PlayFly(__instance);
+            HeavypinAero.OnFinsDeployed(__instance);
         }
     }
 

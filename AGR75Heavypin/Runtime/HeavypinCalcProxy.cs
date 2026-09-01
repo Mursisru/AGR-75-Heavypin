@@ -38,7 +38,9 @@ namespace Heavypin.Runtime
             }
 
             HeavypinMotors.LoadProfile();
+            HeavypinAero.CaptureBase(_missile);
             HeavypinMotors.Apply(_missile);
+            HeavypinAero.Apply(_missile);
             CacheEncyclopediaStats();
             HeavypinPlugin.ModLog?.LogInfo(
                 $"HeavypinCalcProxy restRange={EncyclopediaRangeM:F0}m burn={EncyclopediaBurnS:F1}s dV={EncyclopediaDeltaVMps:F0} thrust={HeavypinMotors.AppliedThrustN:F0} fuel={HeavypinMotors.AppliedFuelKg:F1}");

@@ -99,11 +99,18 @@ namespace Heavypin.Runtime
             if (motors == null || motors.Length == 0 || motors.GetValue(0) is not object motor)
                 return;
 
-            if (!MotorHasFx(motor))
+            WipeStockFx(missile);
+
+            if (!MotorNeedsInject(motor, nozzles))
             {
-                WipeStockFx(missile);
-                InjectOnNozzles(missile, motor, nozzles);
+                ForcePlay(motor);
+                HeavypinPlugin.ModLog?.LogInfo(
+                    $"HeavypinMotorFx bind vis='{(vis != null ? vis.name : "null")}' nozzles={nozzles.Count} reused");
+                return;
             }
+
+            WipeOursFx(missile);
+            InjectOnNozzles(missile, motor, nozzles);
 
             ForcePlay(motor);
             HeavypinPlugin.ModLog?.LogInfo(
@@ -127,7 +134,6 @@ namespace Heavypin.Runtime
         {
             var lights = new List<Light>(8);
             var psList = new List<ParticleSystem>(8);
-            var trails = new List<TrailEmitter>(8);
             var audios = new List<AudioSource>(4);
 
             GameObject? psTpl = PsTemplates.Count > 0 ? PsTemplates[0] : null;
@@ -139,6 +145,7 @@ namespace Heavypin.Runtime
                 GameObject? go = PlaceOnDummy(psTpl, sock, "HeavypinExhaust");
                 if (go == null)
                     continue;
+                StripLooseTrails(go);
                 ParticleSystem? root = go.GetComponent<ParticleSystem>() ??
                                        go.GetComponentInChildren<ParticleSystem>(true);
                 if (root == null)
@@ -149,21 +156,6 @@ namespace Heavypin.Runtime
                 LoopExhaust(root);
                 HarvestLights(go, lights);
                 psList.Add(root);
-                for (int i = 0; i < TrailTemplates.Count; i++)
-                {
-                    GameObject? trailGo = PlaceOnDummy(TrailTemplates[i], sock, "HeavypinTrail");
-                    if (trailGo == null)
-                        continue;
-                    TrailEmitter? te = trailGo.GetComponent<TrailEmitter>() ??
-                                       trailGo.GetComponentInChildren<TrailEmitter>(true);
-                    if (te == null)
-                    {
-                        UnityEngine.Object.Destroy(trailGo);
-                        continue;
-                    }
-                    te.rb = missile.rb;
-                    trails.Add(te);
-                }
                 for (int i = 0; i < LightTemplates.Count; i++)
                 {
                     GameObject? litGo = PlaceOnDummy(LightTemplates[i], sock, "HeavypinLight");
@@ -215,7 +207,7 @@ namespace Heavypin.Runtime
             if (ParticlesField != null)
                 ParticlesField.SetValue(motor, psList.ToArray());
             if (TrailsField != null)
-                TrailsField.SetValue(motor, trails.ToArray());
+                TrailsField.SetValue(motor, Array.CreateInstance(typeof(TrailEmitter), 0));
             if (AudioField != null)
                 AudioField.SetValue(motor, audios.ToArray());
             if (LightsField != null)
@@ -226,7 +218,21 @@ namespace Heavypin.Runtime
                 startupField.SetValue(motor, audios[0]);
 
             HeavypinPlugin.ModLog?.LogInfo(
-                $"HeavypinMotorFx inject ps={psList.Count} trails={trails.Count} audio={audios.Count} lights={lights.Count}");
+                $"HeavypinMotorFx inject ps={psList.Count} audio={audios.Count} lights={lights.Count}");
+        }
+
+        private static void StripLooseTrails(GameObject go)
+        {
+            TrailEmitter[] tes = go.GetComponentsInChildren<TrailEmitter>(true);
+            for (int i = 0; i < tes.Length; i++)
+            {
+                TrailEmitter te = tes[i];
+                if (te == null)
+                    continue;
+                te.StopTrail();
+                te.enabled = false;
+                UnityEngine.Object.Destroy(te);
+            }
         }
 
         private static void ForcePlay(object motor)
@@ -381,13 +387,84 @@ namespace Heavypin.Runtime
             }
         }
 
-        private static bool MotorHasFx(object motor)
+        private static bool MotorNeedsInject(object motor, List<Transform> nozzles)
         {
-            if (ParticlesField?.GetValue(motor) is ParticleSystem[] ps && ps.Length > 0)
+            int want = nozzles.Count;
+            if (want == 0)
+                return false;
+
+            if (ParticlesField?.GetValue(motor) is not ParticleSystem[] ps || ps.Length != want)
                 return true;
-            if (TrailsField?.GetValue(motor) is TrailEmitter[] tr && tr.Length > 0)
-                return true;
+
+            for (int i = 0; i < want; i++)
+            {
+                ParticleSystem? p = ps[i];
+                Transform? sock = nozzles[i];
+                if (p == null || sock == null)
+                    return true;
+                if (!IsOursFx(p.transform))
+                    return true;
+                if (p.transform.parent != sock)
+                    return true;
+            }
+
             return false;
+        }
+
+        private static void WipeOursFx(Missile missile)
+        {
+            if (missile == null)
+                return;
+
+            var kill = new List<GameObject>(12);
+            TrailEmitter[] trails = missile.GetComponentsInChildren<TrailEmitter>(true);
+            for (int i = 0; i < trails.Length; i++)
+            {
+                TrailEmitter te = trails[i];
+                if (te == null || !IsOursFx(te.transform))
+                    continue;
+                te.StopTrail();
+                te.enabled = false;
+                kill.Add(te.gameObject);
+            }
+
+            ParticleSystem[] all = missile.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < all.Length; i++)
+            {
+                ParticleSystem ps = all[i];
+                if (ps == null || !IsOursFx(ps.transform))
+                    continue;
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                kill.Add(ps.gameObject);
+            }
+
+            Light[] lights = missile.GetComponentsInChildren<Light>(true);
+            for (int i = 0; i < lights.Length; i++)
+            {
+                Light lit = lights[i];
+                if (lit == null || !IsOursFx(lit.transform))
+                    continue;
+                lit.enabled = false;
+                kill.Add(lit.gameObject);
+            }
+
+            AudioSource[] audios = missile.GetComponentsInChildren<AudioSource>(true);
+            for (int i = 0; i < audios.Length; i++)
+            {
+                AudioSource a = audios[i];
+                if (a == null || !IsOursFx(a.transform))
+                    continue;
+                a.Stop();
+                kill.Add(a.gameObject);
+            }
+
+            for (int i = 0; i < kill.Count; i++)
+            {
+                if (kill[i] == null)
+                    continue;
+                kill[i].SetActive(false);
+                UnityEngine.Object.Destroy(kill[i]);
+            }
         }
 
         private static void WipeStockFx(Missile missile)

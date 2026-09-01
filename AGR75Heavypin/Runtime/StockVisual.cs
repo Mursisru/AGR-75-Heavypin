@@ -77,6 +77,43 @@ namespace Heavypin.Runtime
                     continue;
                 Mute(r);
             }
+
+            MuteStockFx(root);
+        }
+
+        private static void MuteStockFx(GameObject root)
+        {
+            ParticleSystem[] ps = root.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < ps.Length; i++)
+            {
+                ParticleSystem p = ps[i];
+                if (p == null || IsOursFxRoot(p.transform))
+                    continue;
+                p.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                p.gameObject.SetActive(false);
+            }
+
+            TrailEmitter[] trails = root.GetComponentsInChildren<TrailEmitter>(true);
+            for (int i = 0; i < trails.Length; i++)
+            {
+                TrailEmitter te = trails[i];
+                if (te == null || IsOursFxRoot(te.transform))
+                    continue;
+                te.StopTrail();
+                te.enabled = false;
+            }
+        }
+
+        private static bool IsOursFxRoot(Transform t)
+        {
+            while (t != null)
+            {
+                string n = t.name;
+                if (n == "HeavypinExhaust" || n == "HeavypinTrail" || n == "HeavypinAudio" || n == "HeavypinLight")
+                    return true;
+                t = t.parent;
+            }
+            return false;
         }
 
         private static void Mute(Renderer r)
