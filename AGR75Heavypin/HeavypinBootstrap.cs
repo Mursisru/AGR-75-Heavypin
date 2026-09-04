@@ -219,7 +219,7 @@ namespace Heavypin
             info.description = HeavypinConstants.Description;
             info.massPerRound = HeavypinConstants.LaunchMassKg;
             info.costPerRound = HeavypinConstants.Cost;
-            info.blastDamage = HeavypinConstants.BlastYieldKg;
+            HeavypinWarhead.ApplyInfo(info);
             info.pK = HeavypinConstants.Pk;
             info.nuclear = false;
             info.strategic = false;

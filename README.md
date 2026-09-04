@@ -1,6 +1,6 @@
 ﻿# AGR-75 Heavypin
 
-[![Version](https://img.shields.io/badge/version-0.0.0-blue.svg)](./AppVersion)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](./CHANGELOG.md)
 [![BepInEx](https://img.shields.io/badge/BepInEx-5-green.svg)](https://github.com/BepInEx/BepInEx)
 [![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-lightgrey.svg)](#)
 
@@ -16,7 +16,7 @@ BepInEx 5 mod for **Nuclear Option**: AGR-75 Heavypin laser-guided rocket pack (
 - Shared AGR-24 `unitPrefab`; visuals stamped after spawn
 - Own 4x / 6x launchers with dummy snap (ROOT only)
 - Laser seeker HUD from AGR-24
-- Stats: 75 kg, 11.5 kg warhead, 2.5 s burn, 2.2 Mach, 15 km encyclopedia range
+- Stats: 75 kg, 16 kg HE, high AP, 5.5 s burn then IR-cold coast, 2.5 Mach, ~18 km design range
 
 ## Build
 - Plugin: `dotnet build AGR75Heavypin/AGR75Heavypin.csproj -c Release`

@@ -12,8 +12,6 @@ namespace Heavypin.Runtime
             typeof(Missile).GetField("motor", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo? MassField =
             typeof(Missile).GetField("mass", BindingFlags.Instance | BindingFlags.NonPublic);
-        private static readonly FieldInfo? BlastYieldField =
-            typeof(Missile).GetField("blastYield", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo? MotorStageField =
             typeof(Missile).GetField("motorStage", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly Type? MotorType =
@@ -42,7 +40,7 @@ namespace Heavypin.Runtime
                 LoadProfile();
 
             MassField?.SetValue(missile, HeavypinConstants.LaunchMassKg);
-            BlastYieldField?.SetValue(missile, HeavypinConstants.BlastYieldKg);
+            HeavypinWarhead.Apply(missile);
             if (missile.rb != null)
                 missile.rb.mass = HeavypinConstants.LaunchMassKg;
 

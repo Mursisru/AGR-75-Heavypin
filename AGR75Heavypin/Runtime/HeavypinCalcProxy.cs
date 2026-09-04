@@ -42,8 +42,10 @@ namespace Heavypin.Runtime
             HeavypinMotors.Apply(_missile);
             HeavypinAero.Apply(_missile);
             CacheEncyclopediaStats();
+            if (EncyclopediaRangeM < HeavypinConstants.DesignRangeM * 0.5f)
+                EncyclopediaRangeM = HeavypinConstants.DesignRangeM;
             HeavypinPlugin.ModLog?.LogInfo(
-                $"HeavypinCalcProxy restRange={EncyclopediaRangeM:F0}m burn={EncyclopediaBurnS:F1}s dV={EncyclopediaDeltaVMps:F0} thrust={HeavypinMotors.AppliedThrustN:F0} fuel={HeavypinMotors.AppliedFuelKg:F1}");
+                $"HeavypinCalcProxy range={EncyclopediaRangeM:F0}m burn={EncyclopediaBurnS:F1}s dV={EncyclopediaDeltaVMps:F0} thrust={HeavypinMotors.AppliedThrustN:F0} fuel={HeavypinMotors.AppliedFuelKg:F1}");
         }
 
         private static void CacheEncyclopediaStats()

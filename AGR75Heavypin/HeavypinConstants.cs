@@ -13,7 +13,7 @@ namespace Heavypin
         public const string BogeyName = "AGR-75 Heavypin";
         public const string SeekerTypeName = "Laser";
         public const string Description =
-            "Heavy laser-guided air-to-ground rocket. Four-nozzle motor, 11.5kg HE, 12-18km depending on launch speed.";
+            "Heavy laser-guided air-to-ground rocket. 16kg HE, high AP, long burn then IR-cold coast. ~15-20km from air launch.";
 
         public const string RocketVisualName = "HeavypinRocket";
         public const string LauncherVisualName = "HeavypinLauncher";
@@ -43,8 +43,11 @@ namespace Heavypin
         public const int SlotCount6 = 6;
 
         public const float LaunchMassKg = 75f;
-        public const float BlastYieldKg = 11.5f;
-        public const float Cost = 0.12f;
+        // Distinct from AGR-24 Kingpin HE/AP (shared unitPrefab UI otherwise shows stock values).
+        public const float BlastYieldKg = 16f;
+        public const float PierceDamage = 420f;
+        public const float ArmorTierEffectiveness = 4.5f;
+        public const float Cost = 0.14f;
         public const float RadarSize = 0.015f;
 
         public const float LengthM = 1.36f;
@@ -54,23 +57,26 @@ namespace Heavypin
         public const float MountEmptyMass4Kg = 18f;
         public const float MountEmptyMass6Kg = 24f;
 
-        public const float DesignRangeM = 15000f;
+        public const float DesignRangeM = 18000f;
         public const float EncyclopediaMinRangeM = 400f;
-        public const float CalcRestLaunchSpeedMps = 0f;
-        public const float CalcRestLaunchAltM = 0f;
+        // Air-launch envelope for hangar/encyclopedia R: (rest calc was ~5km and looked broken).
+        public const float CalcRestLaunchSpeedMps = 280f;
+        public const float CalcRestLaunchAltM = 4000f;
         public const float CalcRestTargetAltM = 0f;
-        public const float CalcRestTargetDistM = 15000f;
-        public const float Pk = 0.45f;
+        public const float CalcRestTargetDistM = 18000f;
+        public const float Pk = 0.55f;
 
-        public const float MotorThrustN = 20000f;
-        public const float MotorFuelKg = 16f;
-        public const float MotorBurnS = 2.5f;
-        public const float DesignTopSpeedMach = 2.2f;
+        public const float MotorThrustN = 24000f;
+        public const float MotorFuelKg = 30f;
+        // Longer burn = longer IR window; after burnout IR is stripped (cold coast).
+        public const float MotorBurnS = 5.5f;
+        public const float DesignTopSpeedMach = 2.5f;
         public const float SeaLevelSpeedOfSoundMps = 340f;
         public const float DesignTopSpeedMps = DesignTopSpeedMach * SeaLevelSpeedOfSoundMps;
 
-        // Missile.ApplyAero: lift and drag scale with finArea / currentFinArea.
-        public const float GlideFinAreaScale = 2.5f;
+        // ApplyAero postfix: lift × scale, drag × scale (finArea stays stock — CalcRange/coast).
+        public const float GlideLiftScale = 3f;
+        public const float GlideDragScale = 0.85f;
 
         public const string DummyRocketCenter = "CenterOfModel";
         public const string DummyLauncherCenter = "CenterOfModel";

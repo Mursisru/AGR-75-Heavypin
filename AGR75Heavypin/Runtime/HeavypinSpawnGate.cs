@@ -222,6 +222,7 @@ namespace Heavypin
 
             HeavypinAero.Apply(missile);
             HeavypinMotorFx.Bind(missile);
+            HeavypinIrCold.Ensure(missile);
 
             if (vis == null)
                 vis = VisualStamp.FindRocket(missile.transform);

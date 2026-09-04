@@ -240,6 +240,26 @@ namespace Heavypin.Patches
         }
     }
 
+    [HarmonyPatch(typeof(Missile), "ApplyAero")]
+    internal static class HeavypinApplyAeroPatch
+    {
+        private static void Postfix(Missile __instance)
+        {
+            if (HeavypinBootstrap.IsOurs(__instance))
+                HeavypinAero.BoostGlide(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(Missile), nameof(Missile.GetPierce))]
+    internal static class HeavypinGetPiercePatch
+    {
+        private static void Postfix(Missile __instance, ref float __result)
+        {
+            if (HeavypinBootstrap.IsOurs(__instance))
+                __result = HeavypinWarhead.PierceDamage;
+        }
+    }
+
     [HarmonyPatch(typeof(MountedMissile), nameof(MountedMissile.Rearm))]
     internal static class HeavypinRearmPatch
     {
@@ -314,10 +334,17 @@ namespace Heavypin.Patches
             weaponInfo.costPerRound = HeavypinConstants.Cost;
             weaponInfo.blastDamage = HeavypinConstants.BlastYieldKg;
             weaponInfo.massPerRound = HeavypinConstants.LaunchMassKg;
+            HeavypinWarhead.ApplyInfo(weaponInfo);
             AircraftSelectionDisplay.SetTmp(__instance, "weaponSeeker", HeavypinConstants.SeekerTypeName);
+            AircraftSelectionDisplay.SetTmp(__instance, "weaponAP", string.Format("AP: {0}", HeavypinWarhead.PierceDamage));
             AircraftSelectionDisplay.SetTmp(__instance, "weaponHE", "HE: " + UnitConverter.YieldReading(HeavypinConstants.BlastYieldKg));
             AircraftSelectionDisplay.SetTmp(__instance, "weaponCost", "C: " + UnitConverter.ValueReading(HeavypinConstants.Cost));
             AircraftSelectionDisplay.SetTmp(__instance, "weaponRCS", string.Format("RCS: {0}", HeavypinConstants.RadarSize));
+            float rangeM = HeavypinCalcProxy.EncyclopediaRangeM > 1000f
+                ? HeavypinCalcProxy.EncyclopediaRangeM
+                : HeavypinConstants.DesignRangeM;
+            AircraftSelectionDisplay.SetTmp(__instance, "weaponRange", "R: " + UnitConverter.DistanceReading(rangeM));
+            HeavypinEncyclopediaStats.ApplyTargetRequirements(weaponInfo);
         }
     }
 
@@ -382,6 +409,7 @@ namespace Heavypin.Patches
             info.massPerRound = HeavypinConstants.LaunchMassKg;
             info.blastDamage = HeavypinConstants.BlastYieldKg;
             info.costPerRound = HeavypinConstants.Cost;
+            HeavypinWarhead.ApplyInfo(info);
             info.missile = true;
             info.bomb = false;
             info.glideBomb = false;

@@ -51,6 +51,8 @@ namespace Heavypin.Patches
 
             float range = HeavypinCalcProxy.CalcRange(
                 ac.speed, ac.GlobalPosition().y, tgtAlt, tgtDist, 0f, out _);
+            if (range < HeavypinConstants.DesignRangeM * 0.35f)
+                range = HeavypinConstants.DesignRangeM;
             MaxRangeField?.SetValue(__instance, range);
             LastCalcField?.SetValue(__instance, Time.timeSinceLevelLoad);
             return false;
