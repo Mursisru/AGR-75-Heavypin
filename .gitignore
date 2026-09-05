@@ -17,3 +17,6 @@ UnityBake/BakeLog*.txt
 *.log
 _tmp_*.py
 _release_staging/
+
+Mursisru_*.zip
+

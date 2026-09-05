@@ -5,19 +5,19 @@ using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
 
-namespace Heavypin.UnityBake
+namespace Sledgepin.UnityBake
 {
     public static class NobpBundleBuilder
     {
-        private const string OutputName = "AGR75Heavypin.nobp";
-        private const string RocketPrefabName = "HeavypinRocket";
-        private const string Launcher4Name = "HeavypinLauncher4";
-        private const string Launcher6Name = "HeavypinLauncher6";
-        private const string RocketFbx = "AGR-75-Heavypin-MainRocket.fbx";
+        private const string OutputName = "AGR75Sledgepin.nobp";
+        private const string RocketPrefabName = "SledgepinRocket";
+        private const string Launcher4Name = "SledgepinLauncher4";
+        private const string Launcher6Name = "SledgepinLauncher6";
+        private const string RocketFbx = "AGR-75-Sledgepin-MainRocket.fbx";
         private const string Launcher4Fbx = "LaunchStandAGR-75-4X.fbx";
         private const string Launcher6Fbx = "LaunchStandAGR-75-6X.fbx";
 
-        [MenuItem("AGR-75-Heavypin/Build Nobp Bundle")]
+        [MenuItem("AGR-75-Sledgepin/Build Nobp Bundle")]
         public static void Build()
         {
             string assetsRoot = "Assets/MissilePack";
@@ -36,7 +36,7 @@ namespace Heavypin.UnityBake
                 $"{assetsRoot}/{Launcher4Name}.prefab",
                 $"{assetsRoot}/{Launcher6Name}.prefab",
                 $"{assetsRoot}/patch_manifest.txt",
-                $"{assetsRoot}/HeavypinRocket.controller"
+                $"{assetsRoot}/SledgepinRocket.controller"
             };
 
             AddFolderAssets(assetNames, $"{assetsRoot}/Materials/Rocket");
@@ -64,17 +64,17 @@ namespace Heavypin.UnityBake
             string alt = Path.Combine(buildDir, OutputName.ToLowerInvariant());
             string src = File.Exists(produced) ? produced : alt;
 
-            string pluginRes = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "AGR75Heavypin", "Resources"));
+            string pluginRes = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "AGR75Sledgepin", "Resources"));
             Directory.CreateDirectory(pluginRes);
             if (File.Exists(src))
             {
                 File.Copy(src, Path.Combine(pluginRes, OutputName), true);
-                string binRel = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "AGR75Heavypin", "bin", "Release"));
+                string binRel = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "AGR75Sledgepin", "bin", "Release"));
                 Directory.CreateDirectory(binRel);
                 File.Copy(src, Path.Combine(binRel, OutputName), true);
             }
 
-            string deploy = @"C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option\BepInEx\plugins\AGR-75-Heavypin";
+            string deploy = @"C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option\BepInEx\plugins\AGR-75-Sledgepin";
             Directory.CreateDirectory(deploy);
             if (File.Exists(src))
             {
@@ -85,7 +85,7 @@ namespace Heavypin.UnityBake
             CopyDiskMaps(Path.Combine(Application.dataPath, "MissilePack", "Textures", "Rocket"), deploy);
             CopyDiskMaps(Path.Combine(Application.dataPath, "MissilePack", "Textures", "Launcher"), deploy);
 
-            Debug.Log($"AGR-75 Heavypin: built {src}");
+            Debug.Log($"AGR-75 Sledgepin: built {src}");
             AssetDatabase.Refresh();
         }
 
@@ -93,7 +93,7 @@ namespace Heavypin.UnityBake
         {
             string json =
 @"{
-  ""modName"": ""AGR75Heavypin"",
+  ""modName"": ""AGR75Sledgepin"",
   ""schemaVersion"": 3,
   ""modVersion"": ""0.0.0"",
   ""Patches"": [],
@@ -117,7 +117,7 @@ namespace Heavypin.UnityBake
             string fbxPath = $"{assetsRoot}/{fbxName}";
             if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), fbxPath.Replace('/', Path.DirectorySeparatorChar))))
             {
-                Debug.LogWarning($"AGR-75 Heavypin: {fbxName} not found.");
+                Debug.LogWarning($"AGR-75 Sledgepin: {fbxName} not found.");
                 return;
             }
 
@@ -125,13 +125,13 @@ namespace Heavypin.UnityBake
             GameObject fbx = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
             if (fbx == null)
             {
-                Debug.LogError($"AGR-75 Heavypin: failed to load {fbxName}");
+                Debug.LogError($"AGR-75 Sledgepin: failed to load {fbxName}");
                 return;
             }
 
             GameObject root = UnityEngine.Object.Instantiate(fbx);
-            root.name = prefabName.StartsWith("HeavypinLauncher", StringComparison.Ordinal)
-                ? "HeavypinLauncher"
+            root.name = prefabName.StartsWith("SledgepinLauncher", StringComparison.Ordinal)
+                ? "SledgepinLauncher"
                 : prefabName;
 
             foreach (Light light in root.GetComponentsInChildren<Light>(true))
@@ -210,7 +210,7 @@ namespace Heavypin.UnityBake
                 float longest = NobpVisualBake.MeasureLongest(root);
                 uniformScale = longest > 0.01f ? NobpVisualBake.TargetLengthM / longest : 1f;
                 Debug.Log(
-                    $"AGR-75 Heavypin: flatten longest={longest:F3}m uniform={uniformScale:F4} " +
+                    $"AGR-75 Sledgepin: flatten longest={longest:F3}m uniform={uniformScale:F4} " +
                     $"target={NobpVisualBake.TargetLengthM:F3}m");
                 // Rocket + launcher share Blender axis; mount orients both. No root yaw.
             }
@@ -221,7 +221,7 @@ namespace Heavypin.UnityBake
             string prefabPath = $"{assetsRoot}/{prefabName}.prefab";
             PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             UnityEngine.Object.DestroyImmediate(root);
-            Debug.Log($"AGR-75 Heavypin: {prefabName} from '{fbxPath}'");
+            Debug.Log($"AGR-75 Sledgepin: {prefabName} from '{fbxPath}'");
         }
 
         private static void BindAnimator(GameObject root, string fbxPath, string assetsRoot)
@@ -229,7 +229,7 @@ namespace Heavypin.UnityBake
             AnimationClip[] raw = FilterOwnActionClips(LoadClips(fbxPath));
             if (raw.Length == 0)
             {
-                Debug.LogWarning("AGR-75 Heavypin: no animation clips on rocket FBX.");
+                Debug.LogWarning("AGR-75 Sledgepin: no animation clips on rocket FBX.");
                 return;
             }
 
@@ -243,7 +243,7 @@ namespace Heavypin.UnityBake
 
             AnimationClip merged = MergeFinClips(clips, clipFolder);
 
-            string ctrlPath = $"{assetsRoot}/HeavypinRocket.controller";
+            string ctrlPath = $"{assetsRoot}/SledgepinRocket.controller";
             AssetDatabase.DeleteAsset(ctrlPath);
             AnimatorController ctrl = AnimatorController.CreateAnimatorControllerAtPath(ctrlPath);
             BindClipToLayer(ctrl, 0, merged);
@@ -265,8 +265,8 @@ namespace Heavypin.UnityBake
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             animator.keepAnimatorStateOnDisable = true;
             animator.writeDefaultValuesOnDisable = false;
-            animator.enabled = false; // hangar: off until DeployFins / HeavypinAnim.Play
-            Debug.Log($"AGR-75 Heavypin: animator merged fins clip='{merged.name}' sources={clips.Length}");
+            animator.enabled = false; // hangar: off until DeployFins / SledgepinAnim.Play
+            Debug.Log($"AGR-75 Sledgepin: animator merged fins clip='{merged.name}' sources={clips.Length}");
         }
 
         private static AnimationClip MergeFinClips(AnimationClip[] clips, string folder)
@@ -322,7 +322,7 @@ namespace Heavypin.UnityBake
             settings.loopTime = false;
             AnimationUtility.SetAnimationClipSettings(merged, settings);
             EditorUtility.SetDirty(merged);
-            Debug.Log($"AGR-75 Heavypin: merged {clips.Length} fin clips length={maxLen:F2}s");
+            Debug.Log($"AGR-75 Sledgepin: merged {clips.Length} fin clips length={maxLen:F2}s");
             return merged;
         }
 

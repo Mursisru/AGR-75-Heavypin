@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Heavypin.UnityBake
+namespace Sledgepin.UnityBake
 {
     internal static class NobpVisualBake
     {
@@ -86,7 +86,7 @@ namespace Heavypin.UnityBake
             }
 
             EditorUtility.SetDirty(dst);
-            Debug.Log($"AGR-75 Heavypin: clip '{src.name}' scaleKeys~{scaleFixed} posKeys~{posFixed}");
+            Debug.Log($"AGR-75 Sledgepin: clip '{src.name}' scaleKeys~{scaleFixed} posKeys~{posFixed}");
             return dst;
         }
 
@@ -163,7 +163,7 @@ namespace Heavypin.UnityBake
                 return;
             float longest = MeasureLongest(root);
             Debug.Log(
-                $"AGR-75 Heavypin AABB [{label}] longest={longest:F3}m " +
+                $"AGR-75 Sledgepin AABB [{label}] longest={longest:F3}m " +
                 $"rootScale={root.transform.localScale.x:F4} euler={root.transform.localEulerAngles}");
 
             Transform[] all = root.GetComponentsInChildren<Transform>(true);

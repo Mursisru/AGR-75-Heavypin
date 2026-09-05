@@ -1,5 +1,5 @@
 {
-  "modName": "AGR75Heavypin",
+  "modName": "AGR75Sledgepin",
   "schemaVersion": 3,
   "modVersion": "0.0.0",
   "Patches": [],
